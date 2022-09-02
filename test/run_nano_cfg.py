@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 
 options = VarParsing('python')
 
-options.register('isMC', True,
+options.register('isMC', False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
     "Run this on real data"
@@ -34,7 +34,7 @@ options.register('skip', 0,
     "skip first N events"
 )
 
-options.setDefault('maxEvents', 10)
+options.setDefault('maxEvents', 100)
 options.setDefault('tag', '10215')
 options.parseArguments()
 
@@ -54,6 +54,8 @@ outputFileFEVT = cms.untracked.string('_'.join(['xFullEvt', extension[options.is
 if not options.inputFiles:
     options.inputFiles = ['/store/data/Run2018B/ParkingBPH4/MINIAOD/05May2019-v2/230000/6B5A24B1-0E6E-504B-8331-BD899EB60110.root'] if not options.isMC else \
                          ['/store/user/soffi/BPH_BToXKs_XToJPsiRho_JPsiToMuMu/RunIISummer20UL17_MiniAOD/220424_143706/0000/MiniAOD_1.root']
+    # options.inputFiles = ['/store/data/Run2018D/Charmonium/MINIAOD/UL2018_MiniAODv2-v1/230000/0046DF5F-79FB-E54C-B333-20895FEAA3C2.root'] if not options.isMC else \
+    #                      ['/store/user/soffi/BPH_BToXKs_XToJPsiRho_JPsiToMuMu/RunIISummer20UL17_MiniAOD/220424_143706/0000/MiniAOD_1.root']
 annotation = '%s nevts:%d' % (outputFileNANO, options.maxEvents)
 
 #from Configuration.StandardSequences.Eras import eras

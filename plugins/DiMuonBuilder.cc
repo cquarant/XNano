@@ -22,6 +22,8 @@
 #include "helper.h"
 #include "KinVtxFitter.h"
 
+constexpr bool debug = false;
+
 class DiMuonBuilder : public edm::global::EDProducer<> {
 
 public:
@@ -71,7 +73,22 @@ void DiMuonBuilder::produce(edm::StreamID, edm::Event &evt, edm::EventSetup cons
 
   // output
   std::unique_ptr<pat::CompositeCandidateCollection> ret_value(new pat::CompositeCandidateCollection());
-  
+
+  if(debug){
+    std::cout << "Passing l1 selection (pt > 2.5 GeV): ";
+    for(size_t l0_idx = 0; l0_idx < muons->size(); ++l0_idx) {
+      edm::Ptr<pat::Muon> l0_ptr(muons, l0_idx);
+      std::cout << l1_selection_(*l0_ptr) << "  ";
+    }
+    std::cout << std::endl;
+    std::cout << "Passing l2 selection (pt > 2.5 GeV): ";
+    for(size_t l0_idx = 0; l0_idx < muons->size(); ++l0_idx) {
+      edm::Ptr<pat::Muon> l0_ptr(muons, l0_idx);
+      std::cout << l2_selection_(*l0_ptr) << "  ";
+    }
+    std::cout << std::endl;
+  }
+
   for(size_t l1_idx = 0; l1_idx < muons->size(); ++l1_idx) {
     edm::Ptr<pat::Muon> l1_ptr(muons, l1_idx);
     if(!l1_selection_(*l1_ptr)) continue; 
@@ -93,17 +110,30 @@ void DiMuonBuilder::produce(edm::StreamID, edm::Event &evt, edm::EventSetup cons
       muon_pair.addUserInt("l1_idx", l1_idx );
       muon_pair.addUserInt("l2_idx", l2_idx );
 
+
       // Use UserCands as they should not use memory but keep the Ptr itself
       muon_pair.addUserCand("l1", l1_ptr );
       muon_pair.addUserCand("l2", l2_ptr );
 
-      if( !pre_vtx_selection_(muon_pair) ) continue; // before making the SV, cut on the info we have
+      if(debug){
+	std::cout << std::endl;
+	std::cout << "Muon pair: " << l1_idx << "   " << l2_idx << std::endl;
+	std::cout << "Prefit vertex selection [var (cut): observed val] " << std::endl;
+	std::cout << "|Vz(l1) - Vz(l2)| (<1): "   << abs(l1_ptr->vz() - l2_ptr->vz()) << std::endl;
+	std::cout << "pair mass (in [1,5]): "     << muon_pair.mass() << std::endl;
+	std::cout << "charge (==0): "             << muon_pair.charge() << std::endl;
+	std::cout << "lep deltaR (>0.02): "       << muon_pair.userFloat("lep_deltaR") << std::endl;
+	std::cout << "PASSED: " << pre_vtx_selection_(muon_pair) << std::endl;
+      }
 
+      if( !pre_vtx_selection_(muon_pair) ) continue; // before making the SV, cut on the info we have
+      
       KinVtxFitter fitter(
 			  {ttracks->at(l1_idx), ttracks->at(l2_idx)},
 			  {l1_ptr->mass(), l2_ptr->mass()},
 			  {LEP_SIGMA, LEP_SIGMA} //some small sigma for the particle mass
 			  );
+      std::cout << "Fitter success: " << fitter.success() << std::endl;
       if ( !fitter.success() ) continue;
 
       // save quantities after fit needed for selection and to be saved in the final ntuples
@@ -171,16 +201,110 @@ void DiMuonBuilder::produce(edm::StreamID, edm::Event &evt, edm::EventSetup cons
       muon_pair.addUserFloat("mu2_dr",  l2_ptr->userFloat("dr"));   
 
       // save further quantities, to be saved in the final ntuples: fired paths
-      muon_pair.addUserInt("mu1_fired_Dimuon25_Jpsi",      l1_ptr->userInt("HLT_Dimuon25_Jpsi"));
-      muon_pair.addUserInt("mu1_fired_Dimuon18_PsiPrime",  l1_ptr->userInt("HLT_Dimuon18_PsiPrime"));
-      muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrk_Displaced",     l1_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
-      muon_pair.addUserInt("mu1_fired_DoubleMu4_PsiPrimeTrk_Displaced", l1_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
-      muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrkTrk_Displaced",  l1_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));  
-      muon_pair.addUserInt("mu2_fired_Dimuon25_Jpsi",      l2_ptr->userInt("HLT_Dimuon25_Jpsi"));
-      muon_pair.addUserInt("mu2_fired_Dimuon18_PsiPrime",  l2_ptr->userInt("HLT_Dimuon18_PsiPrime"));
-      muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrk_Displaced",     l2_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
-      muon_pair.addUserInt("mu2_fired_DoubleMu4_PsiPrimeTrk_Displaced", l2_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
-      muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrkTrk_Displaced",  l2_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));   
+
+      // 2017 and 2018 interesting triggers
+      // muon_pair.addUserInt("mu1_fired_Dimuon25_Jpsi",      l1_ptr->userInt("HLT_Dimuon25_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon18_PsiPrime",  l1_ptr->userInt("HLT_Dimuon18_PsiPrime"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrk_Displaced",     l1_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_PsiPrimeTrk_Displaced", l1_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrkTrk_Displaced",  l1_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));  
+
+      // All 2018 Charmonium triggers mu1 fired
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi3p5_Muon2",                  l1_ptr->userInt("HLT_Dimuon0_Jpsi3p5_Muon2"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi_L1_4R_0er1p5R",             l1_ptr->userInt("HLT_Dimuon0_Jpsi_L1_4R_0er1p5R"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi_L1_NoOS",                   l1_ptr->userInt("HLT_Dimuon0_Jpsi_L1_NoOS"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R", l1_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi_NoVertexing_NoOS",          l1_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing_NoOS"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi_NoVertexing",               l1_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_Jpsi",                           l1_ptr->userInt("HLT_Dimuon0_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_LowMass_L1_0er1p5R", l1_ptr->userInt("HLT_Dimuon0_LowMass_L1_0er1p5R"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_LowMass_L1_0er1p5",  l1_ptr->userInt("HLT_Dimuon0_LowMass_L1_0er1p5"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_LowMass_L1_4R",      l1_ptr->userInt("HLT_Dimuon0_LowMass_L1_4R"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_LowMass_L1_4",       l1_ptr->userInt("HLT_Dimuon0_LowMass_L1_4"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon0_LowMass",            l1_ptr->userInt("HLT_Dimuon0_LowMass"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon10_PsiPrime_Barrel_Seagulls", l1_ptr->userInt("HLT_Dimuon10_PsiPrime_Barrel_Seagulls"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon18_PsiPrime_noCorrL1",        l1_ptr->userInt("HLT_Dimuon18_PsiPrime_noCorrL1"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon18_PsiPrime",                 l1_ptr->userInt("HLT_Dimuon18_PsiPrime"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon20_Jpsi_Barrel_Seagulls", l1_ptr->userInt("HLT_Dimuon20_Jpsi_Barrel_Seagulls"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon25_Jpsi_noCorrL1",        l1_ptr->userInt("HLT_Dimuon25_Jpsi_noCorrL1"));
+      // muon_pair.addUserInt("mu1_fired_Dimuon25_Jpsi",                 l1_ptr->userInt("HLT_Dimuon25_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu2_Jpsi_DoubleTkMu0_Phi",    l1_ptr->userInt("HLT_DoubleMu2_Jpsi_DoubleTkMu0_Phi"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05", l1_ptr->userInt("HLT_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_3_Bs",                 l1_ptr->userInt("HLT_DoubleMu4_3_Bs"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_3_Jpsi",               l1_ptr->userInt("HLT_DoubleMu4_3_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrkTrk_Displaced", l1_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_JpsiTrk_Displaced",    l1_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_Jpsi_NoVertexing",     l1_ptr->userInt("HLT_DoubleMu4_Jpsi_NoVertexing"));
+      // muon_pair.addUserInt("mu1_fired_DoubleMu4_PsiPrimeTrk_Displaced",l1_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
+      // muon_pair.addUserInt("mu1_fired_Mu30_TkMu0_Psi",      l1_ptr->userInt("HLT_Mu30_TkMu0_Psi"));
+      // muon_pair.addUserInt("mu1_fired_Mu7p5_L2Mu2_Jpsi",    l1_ptr->userInt("HLT_Mu7p5_L2Mu2_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_Mu7p5_Track2_Jpsi",   l1_ptr->userInt("HLT_Mu7p5_Track2_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_Mu7p5_Track3p5_Jpsi", l1_ptr->userInt("HLT_Mu7p5_Track3p5_Jpsi"));
+      // muon_pair.addUserInt("mu1_fired_Mu7p5_Track7_Jpsi",   l1_ptr->userInt("HLT_Mu7p5_Track7_Jpsi"));
+
+      // BParking triggers mu1 fired
+      muon_pair.addUserInt("mu1_fired_Mu7_IP4",      l1_ptr->userInt("HLT_Mu7_IP4"));
+      muon_pair.addUserInt("mu1_fired_Mu8_IP6",      l1_ptr->userInt("HLT_Mu8_IP6"));
+      muon_pair.addUserInt("mu1_fired_Mu8_IP5",      l1_ptr->userInt("HLT_Mu8_IP5"));
+      muon_pair.addUserInt("mu1_fired_Mu8_IP3",      l1_ptr->userInt("HLT_Mu8_IP3"));
+      muon_pair.addUserInt("mu1_fired_Mu8p5_IP3p5",  l1_ptr->userInt("HLT_Mu8p5_IP3p5"));
+      muon_pair.addUserInt("mu1_fired_Mu9_IP6",      l1_ptr->userInt("HLT_Mu9_IP6"));
+      muon_pair.addUserInt("mu1_fired_Mu9_IP5",      l1_ptr->userInt("HLT_Mu9_IP5"));
+      muon_pair.addUserInt("mu1_fired_Mu9_IP4",      l1_ptr->userInt("HLT_Mu9_IP4"));
+      muon_pair.addUserInt("mu1_fired_Mu10p5_IP3p5", l1_ptr->userInt("HLT_Mu10p5_IP3p5"));
+      muon_pair.addUserInt("mu1_fired_Mu12_IP6",     l1_ptr->userInt("HLT_Mu12_IP6"));
+
+      // 2017 and 2018 interesting Jpsi triggers mu2 fired
+      // muon_pair.addUserInt("mu2_fired_Dimuon25_Jpsi",      l2_ptr->userInt("HLT_Dimuon25_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon18_PsiPrime",  l2_ptr->userInt("HLT_Dimuon18_PsiPrime"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrk_Displaced",     l2_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_PsiPrimeTrk_Displaced", l2_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrkTrk_Displaced",  l2_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));   
+
+      // All 2018 Charmonium triggers mu2 fired
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi3p5_Muon2",                  l2_ptr->userInt("HLT_Dimuon0_Jpsi3p5_Muon2"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi_L1_4R_0er1p5R",             l2_ptr->userInt("HLT_Dimuon0_Jpsi_L1_4R_0er1p5R"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi_L1_NoOS",                   l2_ptr->userInt("HLT_Dimuon0_Jpsi_L1_NoOS"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R", l2_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi_NoVertexing_NoOS",          l2_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing_NoOS"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi_NoVertexing",               l2_ptr->userInt("HLT_Dimuon0_Jpsi_NoVertexing"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_Jpsi",                           l2_ptr->userInt("HLT_Dimuon0_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_LowMass_L1_0er1p5R", l2_ptr->userInt("HLT_Dimuon0_LowMass_L1_0er1p5R"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_LowMass_L1_0er1p5",  l2_ptr->userInt("HLT_Dimuon0_LowMass_L1_0er1p5"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_LowMass_L1_4R",      l2_ptr->userInt("HLT_Dimuon0_LowMass_L1_4R"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_LowMass_L1_4",       l2_ptr->userInt("HLT_Dimuon0_LowMass_L1_4"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon0_LowMass",            l2_ptr->userInt("HLT_Dimuon0_LowMass"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon10_PsiPrime_Barrel_Seagulls", l2_ptr->userInt("HLT_Dimuon10_PsiPrime_Barrel_Seagulls"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon18_PsiPrime_noCorrL1",        l2_ptr->userInt("HLT_Dimuon18_PsiPrime_noCorrL1"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon18_PsiPrime",                 l2_ptr->userInt("HLT_Dimuon18_PsiPrime"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon20_Jpsi_Barrel_Seagulls", l2_ptr->userInt("HLT_Dimuon20_Jpsi_Barrel_Seagulls"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon25_Jpsi_noCorrL1",        l2_ptr->userInt("HLT_Dimuon25_Jpsi_noCorrL1"));
+      // muon_pair.addUserInt("mu2_fired_Dimuon25_Jpsi",                 l2_ptr->userInt("HLT_Dimuon25_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu2_Jpsi_DoubleTkMu0_Phi",    l2_ptr->userInt("HLT_DoubleMu2_Jpsi_DoubleTkMu0_Phi"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05", l2_ptr->userInt("HLT_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_3_Bs",                 l2_ptr->userInt("HLT_DoubleMu4_3_Bs"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_3_Jpsi",               l2_ptr->userInt("HLT_DoubleMu4_3_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrkTrk_Displaced", l2_ptr->userInt("HLT_DoubleMu4_JpsiTrkTrk_Displaced"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_JpsiTrk_Displaced",    l2_ptr->userInt("HLT_DoubleMu4_JpsiTrk_Displaced"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_Jpsi_NoVertexing",     l2_ptr->userInt("HLT_DoubleMu4_Jpsi_NoVertexing"));
+      // muon_pair.addUserInt("mu2_fired_DoubleMu4_PsiPrimeTrk_Displaced",l2_ptr->userInt("HLT_DoubleMu4_PsiPrimeTrk_Displaced"));
+      // muon_pair.addUserInt("mu2_fired_Mu30_TkMu0_Psi",      l2_ptr->userInt("HLT_Mu30_TkMu0_Psi"));
+      // muon_pair.addUserInt("mu2_fired_Mu7p5_L2Mu2_Jpsi",    l2_ptr->userInt("HLT_Mu7p5_L2Mu2_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_Mu7p5_Track2_Jpsi",   l2_ptr->userInt("HLT_Mu7p5_Track2_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_Mu7p5_Track3p5_Jpsi", l2_ptr->userInt("HLT_Mu7p5_Track3p5_Jpsi"));
+      // muon_pair.addUserInt("mu2_fired_Mu7p5_Track7_Jpsi",   l2_ptr->userInt("HLT_Mu7p5_Track7_Jpsi"));
+
+      // BParking triggers mu2 fired
+      muon_pair.addUserInt("mu2_fired_Mu7_IP4",      l2_ptr->userInt("HLT_Mu7_IP4"));
+      muon_pair.addUserInt("mu2_fired_Mu8_IP6",      l2_ptr->userInt("HLT_Mu8_IP6"));
+      muon_pair.addUserInt("mu2_fired_Mu8_IP5",      l2_ptr->userInt("HLT_Mu8_IP5"));
+      muon_pair.addUserInt("mu2_fired_Mu8_IP3",      l2_ptr->userInt("HLT_Mu8_IP3"));
+      muon_pair.addUserInt("mu2_fired_Mu8p5_IP3p5",  l2_ptr->userInt("HLT_Mu8p5_IP3p5"));
+      muon_pair.addUserInt("mu2_fired_Mu9_IP6",      l2_ptr->userInt("HLT_Mu9_IP6"));
+      muon_pair.addUserInt("mu2_fired_Mu9_IP5",      l2_ptr->userInt("HLT_Mu9_IP5"));
+      muon_pair.addUserInt("mu2_fired_Mu9_IP4",      l2_ptr->userInt("HLT_Mu9_IP4"));
+      muon_pair.addUserInt("mu2_fired_Mu10p5_IP3p5", l2_ptr->userInt("HLT_Mu10p5_IP3p5"));
+      muon_pair.addUserInt("mu2_fired_Mu12_IP6",     l2_ptr->userInt("HLT_Mu12_IP6"));
 
       // push in the event
       ret_value->push_back(muon_pair);

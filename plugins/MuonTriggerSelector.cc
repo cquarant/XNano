@@ -120,6 +120,8 @@ void MuonTriggerSelector::produce(edm::Event& iEvent, const edm::EventSetup& iSe
   std::cout << std::endl;
   std::cout << "-----------------------------------------------" << std::endl;
   std::cout << std::endl;
+  std::cout << "Run:   " << iEvent.eventAuxiliary().id().run()   << std::endl;
+  std::cout << "Event: " << iEvent.eventAuxiliary().id().event() << std::endl;
   std::cout << "\n == TRIGGER PATHS= " << std::endl;
   for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) {
     if (triggerBits->accept(i)) 
@@ -187,7 +189,8 @@ void MuonTriggerSelector::produce(edm::Event& iEvent, const edm::EventSetup& iSe
       const edm::TriggerNames &triggerNames = iEvent.triggerNames(*triggerBits);
       for (pat::TriggerObjectStandAlone obj : *triggerObjects) { 
 	obj.unpackPathNames(triggerNames);
-	if(debug) std::cout << "\tTrigger object:  pt " << obj.pt() << ", eta " << obj.eta() << ", phi " << obj.phi() << std::endl;
+	// if(debug) std::cout << "\tTrigger object    :  pt " << obj.pt() << ", eta " << obj.eta() << ", phi " << obj.phi() << std::endl;
+	// if(debug) std::cout << "\tReconstructed muon:  pt " << muon.pt() << ", eta " << muon.eta() << ", phi " << muon.phi() << std::endl;
 
 	// Is this HLT object matching the muon? 
 	bool hltMatchOffline = false;
@@ -196,8 +199,14 @@ void MuonTriggerSelector::produce(edm::Event& iEvent, const edm::EventSetup& iSe
 	TVector3 p3Muon;                                           
 	p3Muon.SetPtEtaPhi(muon.pt(), muon.eta(), muon.phi());    
 	float dr = p3triggerObj.DeltaR(p3Muon);
-	if (dr<drForTriggerMatch_) hltMatchOffline = true;
-
+	if (dr<drForTriggerMatch_){
+	  hltMatchOffline = true;
+	  if(debug){
+	    std::cout << "\tTrigger object    :  pt " << obj.pt() << ", eta " << obj.eta() << ", phi " << obj.phi() << std::endl;
+	    std::cout << "\tReconstructed muon:  pt " << muon.pt() << ", eta " << muon.eta() << ", phi " << muon.phi() << std::endl;
+	    std::cout << "hltMatchOffline: " << hltMatchOffline << endl;
+	  }
+	}
 	// Is this HLT object matching this path?
 	bool hltMatchThisPath = false;
 	if (hltMatchOffline==true) { 
@@ -257,7 +266,15 @@ void MuonTriggerSelector::produce(edm::Event& iEvent, const edm::EventSetup& iSe
   }
   // 
 
-  if(debug) std::cout << "number of Muons=" <<muons->size() << endl;
+  if(debug){
+    std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << "------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Run:   " << iEvent.eventAuxiliary().id().run()   << std::endl;
+    std::cout << "Event: " << iEvent.eventAuxiliary().id().event() << std::endl;
+    std::cout << "Number of Muons=" <<muons->size() << endl;
+  }
 
   // Create a collection with all trg muons
   for(const pat::Muon & muon : *muons){
