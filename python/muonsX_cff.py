@@ -5,7 +5,54 @@ Path2016=["HLT_Dimuon16_Jpsi","HLT_Dimuon13_PsiPrime","HLT_DoubleMu4_JpsiTrk_Dis
 
 Path2017=["HLT_Dimuon25_Jpsi","HLT_Dimuon18_PsiPrime","HLT_DoubleMu4_JpsiTrk_Displaced","HLT_DoubleMu4_PsiPrimeTrk_Displaced","HLT_DoubleMu4_JpsiTrkTrk_Displaced"]
 
-Path=Path2017
+# Path2018=["HLT_Dimuon0_Jpsi3p5_Muon2",
+#           "HLT_Dimuon0_Jpsi_L1_4R_0er1p5R",
+#           "HLT_Dimuon0_Jpsi_L1_NoOS",
+#           "HLT_Dimuon0_Jpsi_NoVertexing_L1_4R_0er1p5R",
+#           "HLT_Dimuon0_Jpsi_NoVertexing_NoOS",
+#           "HLT_Dimuon0_Jpsi_NoVertexing",
+#           "HLT_Dimuon0_Jpsi",
+#           "HLT_Dimuon0_LowMass_L1_0er1p5R",
+#           "HLT_Dimuon0_LowMass_L1_0er1p5",
+#           "HLT_Dimuon0_LowMass_L1_4R",
+#           "HLT_Dimuon0_LowMass_L1_4",
+#           "HLT_Dimuon0_LowMass",
+#           "HLT_Dimuon10_PsiPrime_Barrel_Seagulls",
+#           "HLT_Dimuon18_PsiPrime_noCorrL1",
+#           "HLT_Dimuon18_PsiPrime",
+#           "HLT_Dimuon20_Jpsi_Barrel_Seagulls",
+#           "HLT_Dimuon25_Jpsi_noCorrL1",
+#           "HLT_Dimuon25_Jpsi",
+#           "HLT_DoubleMu2_Jpsi_DoubleTkMu0_Phi",
+#           "HLT_DoubleMu2_Jpsi_DoubleTrk1_Phi1p05",
+#           "HLT_DoubleMu4_3_Bs",
+#           "HLT_DoubleMu4_3_Jpsi",
+#           "HLT_DoubleMu4_JpsiTrkTrk_Displaced",
+#           "HLT_DoubleMu4_JpsiTrk_Displaced",
+#           "HLT_DoubleMu4_Jpsi_Displaced",
+#           "HLT_DoubleMu4_Jpsi_NoVertexing",
+#           "HLT_DoubleMu4_PsiPrimeTrk_Displaced",
+#           "HLT_Mu30_TkMu0_Psi",
+#           "HLT_Mu7p5_L2Mu2_Jpsi",
+#           "HLT_Mu7p5_Track2_Jpsi",
+#           "HLT_Mu7p5_Track3p5_Jpsi",
+#           "HLT_Mu7p5_Track7_Jpsi"
+# ]
+
+PathBPark=["HLT_Mu7_IP4",
+           "HLT_Mu8_IP6",
+           "HLT_Mu8_IP5",
+           "HLT_Mu8_IP3",
+           "HLT_Mu8p5_IP3p5",
+           "HLT_Mu9_IP6",
+           "HLT_Mu9_IP5",
+           "HLT_Mu9_IP4",    
+           "HLT_Mu10p5_IP3p5",
+           "HLT_Mu12_IP6"
+]
+
+#Path=Path2018
+Path=PathBPark
 
 muonTrgSelector = cms.EDProducer("MuonTriggerSelector",
                                  muonCollection = cms.InputTag("slimmedMuons"), 
@@ -25,10 +72,12 @@ muonTrgSelector = cms.EDProducer("MuonTriggerSelector",
 
 
 # we need at least 2 triggering muons
+#### CHANGED TO 1 triggering muon for 2018 HLT_Mu* triggers
 countTrgMuons = cms.EDFilter("PATCandViewCountFilter",
-    minNumber = cms.uint32(2),
-    maxNumber = cms.uint32(999999),
-    src = cms.InputTag("muonTrgSelector", "trgMuons")
+                             #minNumber = cms.uint32(2),
+                             minNumber = cms.uint32(1),
+                             maxNumber = cms.uint32(999999),
+                             src = cms.InputTag("muonTrgSelector", "trgMuons")
 )
 
 # muons selection
